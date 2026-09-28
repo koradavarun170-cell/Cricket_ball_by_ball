@@ -1,0 +1,9 @@
+# Full Development & Model Training Requirements
+# Includes PyTorch for Deep Learning MLP, XGBoost, and visualization libraries
+
+-r requirements.txt
+xgboost>=1.7.0
+torch>=2.0.0
+matplotlib>=3.6.0
+seaborn>=0.12.0
+jupyter>=1.0.0

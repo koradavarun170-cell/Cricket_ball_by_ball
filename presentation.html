@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>King Kohli Boundary Predictor: The ML Journey</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0f1d;
+      --card-bg: rgba(18, 26, 47, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-gold: #f59e0b;
+      --accent-orange: #f97316;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-purple: #8b5cf6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Ambient stadium spotlight glow */
+    .glow-spotlight {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, transparent 70%);
+      top: -150px;
+      left: 20%;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glow-spotlight-2 {
+      position: fixed;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.1) 0%, transparent 70%);
+      bottom: -200px;
+      right: 15%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Navigation Bar */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 40px;
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(10, 15, 29, 0.7);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, var(--accent-gold), var(--accent-orange));
+      color: #000;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-title {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: #fff;
+    }
+
+    .slide-meta {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .slide-counter {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+    }
+
+    /* Main Slide Container */
+    main {
+      flex: 1;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 40px 30px;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1250px;
+      height: calc(100vh - 170px);
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 40px 50px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      overflow-y: auto;
+    }
+
+    .slide.active {
+      display: flex;
+      flex-direction: column;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Typography & Components inside slides */
+    .slide-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      width: fit-content;
+    }
+    .badge-gold { background: rgba(245, 158, 11, 0.15); color: var(--accent-gold); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-cyan { background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.3); }
+    .badge-emerald { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-purple { background: rgba(139, 92, 246, 0.15); color: var(--accent-purple); border: 1px solid rgba(139, 92, 246, 0.3); }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #ffffff 40%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    p.subtitle {
+      font-size: 17px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      align-items: center;
+      flex: 1;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 10px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 15px;
+    }
+
+    /* Cards */
+    .kpi-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--accent-gold);
+    }
+    .kpi-card.emerald::before { background: var(--accent-emerald); }
+    .kpi-card.cyan::before { background: var(--accent-cyan); }
+    .kpi-card.purple::before { background: var(--accent-purple); }
+
+    .kpi-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 36px;
+      font-weight: 800;
+      color: #fff;
+      margin: 8px 0 4px;
+    }
+
+    .kpi-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .kpi-sub {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    /* Visual Media Containers */
+    .chart-container {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .chart-img {
+      max-width: 100%;
+      max-height: 400px;
+      object-fit: contain;
+      border-radius: 10px;
+    }
+
+    /* List Points */
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      padding: 16px;
+      border-radius: 12px;
+    }
+
+    .feature-icon {
+      font-size: 20px;
+      line-height: 1;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    .feature-text h4 {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #f1f5f9;
+    }
+
+    .feature-text p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Footer Controls */
+    footer {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 40px;
+      background: rgba(10, 15, 29, 0.85);
+      border-top: 1px solid var(--card-border);
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      max-width: 400px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      overflow: hidden;
+      margin: 0 30px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 10%;
+      background: linear-gradient(90deg, var(--accent-gold), var(--accent-orange));
+      transition: width 0.3s ease;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 14px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-gold), var(--accent-orange));
+      color: #000;
+      border: none;
+      font-weight: 700;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #fbbf24, #ea580c);
+      color: #000;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35);
+    }
+
+    .key-hint {
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-spotlight"></div>
+  <div class="glow-spotlight-2"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <span class="brand-badge">IPL ANALYTICS</span>
+      <span class="brand-title">King Kohli Boundary Prediction Journey</span>
+    </div>
+    <div class="slide-meta">
+      <span class="slide-counter" id="slide-num">Slide 1 of 8</span>
+    </div>
+  </header>
+
+  <!-- Presentation Slides -->
+  <main>
+
+    <!-- Slide 1: Cover / Hero -->
+    <section class="slide active" id="slide-1">
+      <span class="slide-badge badge-gold">👑 Milestone Presentation</span>
+      <h1>Decoding King Kohli's Boundaries</h1>
+      <p class="subtitle">An End-to-End Machine Learning Journey from Raw Ball-by-Ball IPL Chaos to a 76.5% Accurate Hybrid Probability Ensemble on Severe 6:1 Imbalance.</p>
+
+      <div class="grid-4" style="margin-top: 25px;">
+        <div class="kpi-card">
+          <div class="kpi-label">Class Imbalance</div>
+          <div class="kpi-value">6 : 1</div>
+          <div class="kpi-sub">85.3% Non-boundary vs 14.7% Boundary</div>
+        </div>
+        <div class="kpi-card emerald">
+          <div class="kpi-label">Top Model Accuracy</div>
+          <div class="kpi-value">76.51%</div>
+          <div class="kpi-sub">Test set validation on unseen balls</div>
+        </div>
+        <div class="kpi-card cyan">
+          <div class="kpi-label">Boundary Recall</div>
+          <div class="kpi-value">52.17%</div>
+          <div class="kpi-sub">Captures >1 of every 2 boundaries</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Peak F1-Score</div>
+          <div class="kpi-value">0.3934</div>
+          <div class="kpi-sub">+77.2% gain over naive baseline</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 35px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+        <h4 style="color: var(--accent-gold); margin-bottom: 6px;">💡 Why this achievement is special:</h4>
+        <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6;">
+          Predicting a boundary in T20 cricket is notoriously hard. Ball-by-ball events are subject to intense noise, bowler deception, pitch conditions, and human reaction times. While a naive model blindly guessing "No Boundary" reaches ~85% accuracy with <strong>0% recall</strong>, our final ensemble detects <strong>more than half of all Kohli boundaries</strong> while preserving a stellar <strong>76.5% overall accuracy</strong>.
+        </p>
+      </div>
+    </section>
+
+    <!-- Slide 2: The Data & The Harsh Imbalance -->
+    <section class="slide" id="slide-2">
+      <span class="slide-badge badge-cyan">Phase 1: Problem Definition</span>
+      <h2>The 6:1 Imbalance Reality</h2>
+      <p class="subtitle">Filtering 16 years of IPL history for Virat Kohli revealed the fundamental mathematical bottleneck.</p>
+
+      <div class="grid-2">
+        <div>
+          <ul class="feature-list">
+            <li class="feature-item">
+              <span class="feature-icon">🏏</span>
+              <div class="feature-text">
+                <h4>Kohli's First Innings Profile</h4>
+                <p>Analyzed 3,142 total balls faced in Innings 1 across IPL history up to 2023. Filtered edge cases like 7-run overthrows.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">⚠️</span>
+              <div class="feature-text">
+                <h4>Extreme Minority Rarity (14.7%)</h4>
+                <p>Only 462 out of 3,142 balls resulted in a 4 or 6. 2,680 balls were dots or 1s/2s/3s.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">🎯</span>
+              <div class="feature-text">
+                <h4>The False Accuracy Trap</h4>
+                <p>A trivial classifier that outputs 0 on every delivery automatically achieves 85.3% accuracy, but has 0% utility. F1-score and Recall are the true litmus tests.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="chart-container">
+          <img src="charts/01_class_imbalance.png" alt="Class Imbalance Donut Chart" class="chart-img">
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 3: Initial Exploration & Baseline Struggles -->
+    <section class="slide" id="slide-3">
+      <span class="slide-badge badge-purple">Phase 2: Baseline Struggles</span>
+      <h2>Initial Baselines: The Sampling Dilemma</h2>
+      <p class="subtitle">Exploring Random Forest and naive resampling (ROS & RUS) in <code>Untitled.ipynb</code>.</p>
+
+      <div class="grid-3" style="margin-top: 15px;">
+        <div class="kpi-card">
+          <div class="kpi-label">Baseline Random Forest</div>
+          <div style="font-size: 22px; font-weight: 700; color: #fff; margin: 10px 0 6px;">Recall: 14.81%</div>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            High accuracy (82.2%) but missed 85% of boundaries. The model simply defaulted to the majority class.
+          </p>
+          <div style="margin-top: 12px; font-family: 'JetBrains Mono'; font-size: 12px; color: var(--accent-gold);">F1: 0.2222</div>
+        </div>
+
+        <div class="kpi-card cyan">
+          <div class="kpi-label">RandomOverSampler (ROS)</div>
+          <div style="font-size: 22px; font-weight: 700; color: #fff; margin: 10px 0 6px;">Recall: 25.93%</div>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            Duplicating boundary deliveries improved recall modestly, but caused overfitting on duplicate training instances.
+          </p>
+          <div style="margin-top: 12px; font-family: 'JetBrains Mono'; font-size: 12px; color: var(--accent-cyan);">F1: 0.3111</div>
+        </div>
+
+        <div class="kpi-card emerald">
+          <div class="kpi-label">RandomUnderSampler (RUS)</div>
+          <div style="font-size: 22px; font-weight: 700; color: #fff; margin: 10px 0 6px;">Recall: 66.67%</div>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            Discarded 80% of majority non-boundaries. High recall came at catastrophic precision (26.5%) and accuracy (62.5%).
+          </p>
+          <div style="margin-top: 12px; font-family: 'JetBrains Mono'; font-size: 12px; color: var(--accent-emerald);">F1: 0.3789</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 30px; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px;">
+        <h4 style="color: #fff; margin-bottom: 6px;">💡 The Breakthrough Realization:</h4>
+        <p style="font-size: 14px; color: var(--text-muted);">
+          Raw match state features alone (over, ball, position) were insufficient. A batter doesn't hit a boundary purely based on the over number—they hit boundaries based on <strong>strike rate pressure, recent dot ball droughts, and momentum shifts</strong>. We needed dynamic temporal feature engineering.
+        </p>
+      </div>
+    </section>
+
+    <!-- Slide 4: Feature Engineering Breakthrough -->
+    <section class="slide" id="slide-4">
+      <span class="slide-badge badge-gold">Phase 3: Domain Engineering</span>
+      <h2>The Feature Engineering Breakthrough</h2>
+      <p class="subtitle">Designing <code>create_dataset()</code>: Capturing the psychology and momentum of T20 batting.</p>
+
+      <div class="grid-2">
+        <div>
+          <ul class="feature-list">
+            <li class="feature-item">
+              <span class="feature-icon">📈</span>
+              <div class="feature-text">
+                <h4>Progressive Strike Rate (<code>current_sr</code>)</h4>
+                <p>Cumulative batting strike rate before the delivery. Highlights when Kohli is set vs when he is rebuilding.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">🔥</span>
+              <div class="feature-text">
+                <h4>Recent Rolling Runs (<code>runs_last_5</code> & <code>runs_last_10</code>)</h4>
+                <p>Rolling sums of runs scored in the preceding 5 and 10 balls. Captures acceleration bursts.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">⏱️</span>
+              <div class="feature-text">
+                <h4>Boundary Drought Index (<code>balls_since_boundary</code>)</h4>
+                <p>Continuous ball counter tracking deliveries elapsed since Kohli's last 4 or 6. As drought climbs, boundary probability surges.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">🎯</span>
+              <div class="feature-text">
+                <h4>Dot Ball Pressure (<code>dotballs_last_5</code>)</h4>
+                <p>Measures bowler strangulation and intent shifts.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="chart-container">
+          <img src="charts/05_catboost_feature_importance.png" alt="Feature Importance" class="chart-img">
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 5: Model Benchmarking & Resampling -->
+    <section class="slide" id="slide-5">
+      <span class="slide-badge badge-cyan">Phase 4: Algorithmic Benchmarking</span>
+      <h2>The Resampling & Modeling Showdown</h2>
+      <p class="subtitle">Systematic evaluation in <code>logistic.ipynb</code>: Testing linear models, trees, SMOTE, and XGBoost.</p>
+
+      <div class="grid-2">
+        <div>
+          <ul class="feature-list">
+            <li class="feature-item">
+              <span class="feature-icon">🌲</span>
+              <div class="feature-text">
+                <h4>Decision Trees & Standard RF</h4>
+                <p>Suffered high false negative rates. Default split criteria prioritized majority accuracy (F1: 0.27–0.30).</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">⚡</span>
+              <div class="feature-text">
+                <h4>XGBoost (scale_pos_weight + Tuning)</h4>
+                <p>Adjusting scale weight to 5.79x for positive cases lifted F1 to <strong>0.3817</strong> with 54.3% recall.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">🔬</span>
+              <div class="feature-text">
+                <h4>BorderlineSMOTE Discovery</h4>
+                <p>Generating synthetic examples specifically near the support vector decision boundary elevated Logistic Regression to <strong>83.49% accuracy</strong> and F1 of <strong>0.3659</strong>.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="chart-container">
+          <img src="charts/02_model_evolution.png" alt="Model Evolution F1" class="chart-img">
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 6: Deep Learning Exploration -->
+    <section class="slide" id="slide-6">
+      <span class="slide-badge badge-purple">Phase 5: Deep Learning</span>
+      <h2>Deep Learning: The PyTorch MLP Experiment</h2>
+      <p class="subtitle">Testing a 5-layer feedforward neural network on tabular cricket states in <code>IPL-dl.ipynb</code>.</p>
+
+      <div class="grid-2">
+        <div>
+          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <h4 style="color: var(--accent-cyan); margin-bottom: 8px;">Architecture Design</h4>
+            <p style="font-family: 'JetBrains Mono'; font-size: 13px; color: #cbd5e1; line-height: 1.6;">
+              Input (14 features) &rarr; Linear(128) &rarr; ReLU &rarr; Linear(128) &rarr; ReLU &rarr; Linear(128) &rarr; ReLU &rarr; Linear(128) &rarr; ReLU &rarr; Linear(1) &rarr; Sigmoid
+            </p>
+          </div>
+
+          <ul class="feature-list">
+            <li class="feature-item">
+              <span class="feature-icon">📉</span>
+              <div class="feature-text">
+                <h4>The Unweighted BCE Trap (T = 0.5)</h4>
+                <p>Trained for 35 epochs. Accuracy reached <strong>83.8%</strong>, but boundary recall was only <strong>6.5%</strong>. Without focal or weighted loss, deep nets overfit majority inertia.</p>
+              </div>
+            </li>
+            <li class="feature-item">
+              <span class="feature-icon">🎚️</span>
+              <div class="feature-text">
+                <h4>Threshold Recovery (T = 0.30 & 0.24)</h4>
+                <p>Lowering threshold to 0.30 recovered recall to <strong>39.1%</strong> (F1: 0.371). Optimal threshold of 0.24 yielded F1: <strong>0.416</strong>, proving deep nets output sound ranking probabilities.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="chart-container">
+          <img src="charts/03_precision_recall_tradeoff.png" alt="Precision Recall Frontier" class="chart-img">
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 7: The Final Hybrid Ensemble -->
+    <section class="slide" id="slide-7">
+      <span class="slide-badge badge-gold">🏆 The Crown Jewel</span>
+      <h2>The Winning Hybrid Probability Ensemble</h2>
+      <p class="subtitle">Blending BorderlineSMOTE Logistic Regression with Tuned CatBoost in <code>04_ensemble_model.ipynb</code>.</p>
+
+      <div class="grid-2">
+        <div>
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 12px; padding: 18px; margin-bottom: 20px;">
+            <div style="font-size: 12px; font-weight: 700; color: var(--accent-gold); text-transform: uppercase;">Ensemble Formula</div>
+            <div style="font-family: 'JetBrains Mono'; font-size: 16px; font-weight: 700; color: #fff; margin-top: 6px;">
+              P_ensemble = 0.30 &times; P_Logistic + 0.70 &times; P_CatBoost
+            </div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-top: 6px;">Optimal Decision Threshold: <strong>0.550</strong></div>
+          </div>
+
+          <div class="grid-2" style="gap: 15px; margin-bottom: 15px;">
+            <div class="kpi-card emerald" style="padding: 14px;">
+              <div class="kpi-label">Accuracy</div>
+              <div class="kpi-value" style="font-size: 28px;">76.51%</div>
+              <div class="kpi-sub">Balanced accuracy</div>
+            </div>
+            <div class="kpi-card cyan" style="padding: 14px;">
+              <div class="kpi-label">Recall</div>
+              <div class="kpi-value" style="font-size: 28px;">52.17%</div>
+              <div class="kpi-sub">52% boundaries caught</div>
+            </div>
+            <div class="kpi-card gold" style="padding: 14px;">
+              <div class="kpi-label">F1 Score</div>
+              <div class="kpi-value" style="font-size: 28px;">0.3934</div>
+              <div class="kpi-sub">Harmonic mean</div>
+            </div>
+            <div class="kpi-card purple" style="padding: 14px;">
+              <div class="kpi-label">ROC-AUC</div>
+              <div class="kpi-value" style="font-size: 28px;">0.6681</div>
+              <div class="kpi-sub">PR-AUC: 0.3030</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <img src="charts/04_ensemble_confusion_matrix.png" alt="Confusion Matrix" class="chart-img">
+        </div>
+      </div>
+    </section>
+
+    <!-- Slide 8: Future Roadmap & Next Milestones -->
+    <section class="slide" id="slide-8">
+      <span class="slide-badge badge-emerald">🚀 What Lies Ahead</span>
+      <h2>The Future Roadmap</h2>
+      <p class="subtitle">Next-generation improvements to take this IPL boundary predictor to production.</p>
+
+      <div class="grid-3" style="margin-top: 15px;">
+        <div class="kpi-card">
+          <div class="kpi-label">1. Match Grouping & Temporal Splits</div>
+          <div style="font-size: 18px; font-weight: 700; color: #fff; margin: 10px 0 6px;">Eliminate Match Leakage</div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Implement <code>GroupKFold</code> on <code>match_id</code> and temporal splitting (train on $\le 2021$, test on 2022–2023) to evaluate true out-of-match generalization.
+          </p>
+        </div>
+
+        <div class="kpi-card cyan">
+          <div class="kpi-label">2. Venue & Context Enrichment</div>
+          <div style="font-size: 18px; font-weight: 700; color: #fff; margin: 10px 0 6px;">Stadium Geometry & Pitch</div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Incorporate venue boundary dimensions (Chinnaswamy vs Chepauk), pitch behavior (dew, turn), bowler handedness (left-arm pace), and Required Run Rate.
+          </p>
+        </div>
+
+        <div class="kpi-card purple">
+          <div class="kpi-label">3. Live Match Simulation App</div>
+          <div style="font-size: 18px; font-weight: 700; color: #fff; margin: 10px 0 6px;">Interactive Web Simulator</div>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Build a live dashboard where fans and analysts can select the current over, bowler type, and batter score to see real-time boundary win-probability gauges.
+          </p>
+        </div>
+      </div>
+
+      <div style="margin-top: 30px; text-align: center; padding: 25px; background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(6,182,212,0.1)); border: 1px solid var(--card-border); border-radius: 14px;">
+        <h3 style="color: #fff; font-size: 22px; margin-bottom: 8px;">🎉 Congratulations on an Outstanding ML Project!</h3>
+        <p style="color: var(--text-muted); font-size: 15px; max-width: 800px; margin: 0 auto;">
+          Turning an imbalanced, noisy 107MB dataset into an organized, mathematically sound, 4-step pipeline yielding <strong>76.5% accuracy</strong> and <strong>0.3934 F1</strong> is a remarkable data science achievement.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer Navigation -->
+  <footer>
+    <button class="btn" id="prev-btn" onclick="prevSlide()">
+      &larr; Previous <span class="key-hint">&larr;</span>
+    </button>
+    
+    <div class="progress-bar-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <button class="btn btn-primary" id="next-btn" onclick="nextSlide()">
+      Next &rarr; <span class="key-hint">&rarr;</span>
+    </button>
+  </footer>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 8;
+
+    function updateSlide() {
+      // Hide all slides
+      document.querySelectorAll('.slide').forEach((slide, idx) => {
+        slide.classList.remove('active');
+        if (idx + 1 === currentSlide) {
+          slide.classList.add('active');
+        }
+      });
+
+      // Update counter and progress bar
+      document.getElementById('slide-num').innerText = `Slide ${currentSlide} of ${totalSlides}`;
+      document.getElementById('progress-bar').style.width = `${(currentSlide / totalSlides) * 100}%`;
+
+      // Update button text on last slide
+      const nextBtn = document.getElementById('next-btn');
+      if (currentSlide === totalSlides) {
+        nextBtn.innerHTML = 'Restart &circlearrowleft;';
+      } else {
+        nextBtn.innerHTML = 'Next &rarr; <span class="key-hint">&rarr;</span>';
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+      } else {
+        currentSlide = 1;
+      }
+      updateSlide();
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+  </script>
+</body>
+</html>

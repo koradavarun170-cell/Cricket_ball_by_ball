@@ -1,0 +1,28 @@
+{
+    "batter": "Virat Kohli",
+    "logistic_weight": 0.3,
+    "catboost_weight": 0.7,
+    "decision_threshold": 0.55,
+    "feature_columns": [
+        "over",
+        "ball",
+        "bat_pos",
+        "bowler",
+        "current_sr",
+        "runs_last_5",
+        "runs_last_10",
+        "prev_ball_runs",
+        "boundaries_last_5",
+        "dotballs_last_5",
+        "balls_since_boundary",
+        "over_phase"
+    ],
+    "metrics": {
+        "accuracy": 0.7651,
+        "recall": 0.5217,
+        "precision": 0.3158,
+        "f1": 0.3934,
+        "roc_auc": 0.6681,
+        "pr_auc": 0.303
+    }
+}
