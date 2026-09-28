@@ -1,10 +1,6 @@
-# Production Web Application Requirements (Render Deployment)
-# Optimized for fast build times and low memory footprint (<512MB RAM)
-
+streamlit>=1.30.0
 numpy>=1.23.0
 pandas>=1.4.0
 scikit-learn>=1.2.0
-imbalanced-learn>=0.10.0
 catboost>=1.1.0
 joblib>=1.2.0
-streamlit>=1.30.0
