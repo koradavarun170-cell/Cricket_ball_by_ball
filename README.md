@@ -1,6 +1,9 @@
 # 🏏 IPL Ball-by-Ball Boundary Prediction (Virat Kohli Edition)
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=koradavarun170-cell/Cricket_ball_by_ball&branch=main&mainModule=app.py)
+
 An end-to-end Machine Learning project and interactive live delivery simulator predicting ball-by-ball boundary occurrences (fours and sixes) for **Virat Kohli** in the Indian Premier League (IPL) up to 2023.
+
 
 ---
 
@@ -26,9 +29,9 @@ IPL/
 │   └── train_and_save_model.py        # Model serialization script for production serving
 │
 ├── models/                            # Serialized production model artifacts
-│   ├── preprocessor.joblib            # Fitted ColumnTransformer
-│   ├── logistic_model.joblib          # Trained BorderlineSMOTE Logistic Regression
-│   ├── catboost_model.cbm             # Trained Tuned CatBoost model
+│   ├── preprocessor.pkl               # Fitted ColumnTransformer
+│   ├── logistic_model.pkl             # Trained BorderlineSMOTE Logistic Regression
+│   ├── catboost_model.pkl             # Trained Tuned CatBoost model
 │   └── config.json                    # Blending weights & optimal threshold configuration
 │
 ├── charts/                            # High-resolution presentation visuals
